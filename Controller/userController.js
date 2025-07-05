@@ -19,6 +19,19 @@ export async function getUser() {
   }
 }
 
+export async function getUserInfo({email}) {
+  try {
+    const conection = await DBConnection()
+    const sql = `SELECT * FROM USUARIO WHERE EMAIL = :email`
+    const result = await conection.execute(sql, [email], {outFormat: OBJECT_FORMAT})
+    await conection.close()
+    return result.rows[0]
+  } catch (error) {
+    console.error("Error fetching user info:", error)
+    throw error
+  }
+}
+
 export async function createUser({nombre, apellido, usuario, email, celular, codubicacion}) {
   try {
     validation.nombre(nombre)

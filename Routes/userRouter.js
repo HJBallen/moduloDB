@@ -8,12 +8,11 @@ userRouter.get("/test", async (req,res)=>{
   res.send(await getUser())
 })
 
-userRouter.post('/', async (req,res)=>{
-  const { nombre, apellido, usuario, email, celular, codubicacion } = req.body
-  console.log(nombre, apellido, usuario, email, celular, codubicacion );
+userRouter.getUserInfo('/', async (req,res)=>{
+  const { email} = req.body
   
   try {
-    const result = await createUser({nombre, apellido, usuario, email, celular, codubicacion})
+    const result = await getUserInfo({email})
     res.status(201).json(result)
   } catch (error) {
     console.error("Error creating user:", error)
