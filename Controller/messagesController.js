@@ -137,7 +137,6 @@ export async function getFriendMensajes(senderId, reciverId) {
         M.USE_CONSECUSER receptor,
         M.FECHAREGMEN fecha,
         M.MEN_CONSMENSAJE hilo,
-        C.CONTENIDOIMAG contenido,
         C.LOCALIZACONTENIDO localizaContenido,
         T.DESCTIPOCONTENIDO tipoContenido,
         A.DESCTIPOARCHIVO tipoArchivo
@@ -145,7 +144,7 @@ export async function getFriendMensajes(senderId, reciverId) {
       LEFT JOIN CONTENIDO C ON M.USE_CONSECUSER= C.USE_CONSECUSER AND M.CONSECUSER = C.CONSECUSER AND M.CONSMENSAJE = C.CONSMENSAJE
       LEFT JOIN TIPOCONTENIDO T ON C.IDTIPOCONTENIDO = T.IDTIPOCONTENIDO
       LEFT JOIN TIPOARCHIVO A ON C.IDTIPOARCHIVO = A.IDTIPOARCHIVO
-      WHERE M.CONSECUSER = :senderId AND M.USE_CONSECUSER = :reciverId AND M.CODGRUPO IS NULL
+      WHERE (M.CONSECUSER = :senderId AND M.USE_CONSECUSER = :reciverId) OR (M.USE_CONSECUSER = :senderId AND M.CONSECUSER = :reciverId) AND M.CODGRUPO IS NULL
       ORDER BY M.FECHAREGMEN DESC`
     const result = await conection.execute(sql, [senderId, reciverId], {outFormat: OBJECT_FORMAT})
     await conection.close()
@@ -165,7 +164,6 @@ export async function getGroupMensajes(codGrupo) {
         M.USE_CONSECUSER receptor,
         M.FECHAREGMEN fecha,
         M.MEN_CONSMENSAJE hilo,
-        C.CONTENIDOIMAG contenido,
         C.LOCALIZACONTENIDO localizaContenido,
         T.DESCTIPOCONTENIDO tipoContenido,
         A.DESCTIPOARCHIVO tipoArchivo

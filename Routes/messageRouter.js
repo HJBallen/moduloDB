@@ -91,6 +91,8 @@ messageRouter.get('/getGroupMessages/:codGrupo', async (req, res) => {
   const { codGrupo } = req.params
   try {
     const messages = await getGroupMensajes(codGrupo)
+    console.log(messages);
+    
     res.status(200).json(messages)
   } catch (error) {
     console.error("Error fetching group messages:", error)
