@@ -1,7 +1,7 @@
 import { config } from '../configuration.js';
 import { DBConnection, OBJECT_FORMAT} from '../db/dbConnection.js';
 
-export async function createFriendMessage({ senderId, reciverId, senderHiloId, reciverHiloId, mensajeHiloId,content}) {
+export async function createFriendTextMessage({ senderId, reciverId, senderHiloId, reciverHiloId, mensajeHiloId,content}) {
   try {
 
     const conection = await DBConnection()
@@ -19,7 +19,41 @@ export async function createFriendMessage({ senderId, reciverId, senderHiloId, r
   }
 }
 
-export async function createGroupMessage({ senderId, reciverId, codGrupo,senderHiloId, reciverHiloId, mensajeHiloId, content }) {
+export async function createFriendContentMessage({ senderId, reciverId, senderHiloId, reciverHiloId, mensajeHiloId,content}) {
+  try {
+    const conection = await DBConnection()
+    const sql = `INSERT INTO MESSAGES (consMensaje, consecUser, Use_consecUser, fechaRegMen, MEN_CONSECUSER, MEN_USE_CONSECUSER, MEN_CONSMENSAJE) VALUES (:consMensaje,:senderId, :reciverId, :timestamp, :senderHiloId, :reciverHiloId, :mensajeHiloId) RETURNING consMensaje, consecUser, Use_consecUser`
+    const consMensaje = await getConsMensaje(senderId, reciverId)
+    const result = await conection.execute(sql, [consMensaje, senderId, reciverId, new Date(), senderHiloId, reciverHiloId, mensajeHiloId], {outFormat: OBJECT_FORMAT})
+    const mensaje = {mensajeId:consMensaje, senderId, reciverId}
+    saveContent(mensaje,content)
+    await conection.commit()
+    await conection.close()
+    return { msg: "Message created successfully", message: result.rows[0] }
+  } catch (error) {
+    console.error("Error creating message:", error)
+    throw error
+  }
+}
+
+export async function createContentGroupMessage({ senderId, reciverId, codGrupo,senderHiloId, reciverHiloId, mensajeHiloId, content }) {
+  try {
+    const conection = await DBConnection()
+    const sql = `INSERT INTO MENSAJE (CONSECUSER, USE_CONSECUSER, CONSMENSAJE, MEN_CONSECUSER, MEN_USE_CONSECUSER, MEN_CONSMENSAJE, CODGRUPO, FECHAREGMEN) VALUES (:senderId, :reciverId, :consMensaje,:senderHiloId, reciverHiloId, mensajeHiloId,:codGrupo ,CURRENT_DATE);`
+    const consMensaje = await getConsMensajeGrupo(senderId, reciverId, codGrupo)
+    const result = await conection.execute(sql, [senderId, reciverId, consMensaje, senderHiloId, reciverHiloId, mensajeHiloId, codGrupo ,new Date()], {outFormat: OBJECT_FORMAT})
+    const mensaje = {mensajeId:consMensaje, senderId, reciverId}
+    saveContent(mensaje,content)
+    await conection.commit()
+    await conection.close()
+    return { msg: "Message created successfully", message: result.rows[0] }
+  } catch (error) {
+    console.error("Error creating message:", error)
+    throw error
+  }
+}
+
+export async function createTextGroupMessage({ senderId, reciverId, codGrupo,senderHiloId, reciverHiloId, mensajeHiloId, content }) {
   try {
     const conection = await DBConnection()
     const sql = `INSERT INTO MENSAJE (CONSECUSER, USE_CONSECUSER, CONSMENSAJE, MEN_CONSECUSER, MEN_USE_CONSECUSER, MEN_CONSMENSAJE, CODGRUPO, FECHAREGMEN) VALUES (:senderId, :reciverId, :consMensaje,:senderHiloId, reciverHiloId, mensajeHiloId,:codGrupo ,CURRENT_DATE);`
@@ -64,12 +98,12 @@ async function getConsMensajeGrupo(senderId, reciverId, codGrupo) {
   
 }
 
-async function saveContent({mensajeId, senderId, reciverId},{name, contenidoImag, tipoArchivo, tipoContenido}) {
+async function saveContent({mensajeId, senderId, reciverId},{localizacion, tipoArchivo, tipoContenido}) {
   try {
     const conection = await DBConnection()
-    const sql = `INSERT INTO CONTENIDO (CONSECCONTENIDO, IDTIPOCONTENIDO, CONSECUSER, USE_CONSECUSER, CONSMENSAJE, IDTIPOARCHIVO, CONTENIDOIMAG, LOCALIZACONTENIDO) VALUES (:conseContenido, :tipoContenido, :senderId, :reciverId, :mensajeId, :tipoArchivo, :contenidoImag, :name)`
+    const sql = `INSERT INTO CONTENIDO (CONSECCONTENIDO, IDTIPOCONTENIDO, CONSECUSER, USE_CONSECUSER, CONSMENSAJE, IDTIPOARCHIVO, CONTENIDOIMAG, LOCALIZACONTENIDO) VALUES (:conseContenido, :tipoContenido, :senderId, :reciverId, :mensajeId, :tipoArchivo, EMPTY_BLOB(), :localizacion)`
     const conseContenido = await getConseContenido(senderId, reciverId, mensajeId)
-    await conection.execute(sql, [conseContenido, tipoContenido, senderId, reciverId, mensajeId, tipoArchivo, contenidoImag, name], {outFormat: OBJECT_FORMAT})
+    await conection.execute(sql, [conseContenido, tipoContenido, senderId, reciverId, mensajeId, tipoArchivo, localizacion], {outFormat: OBJECT_FORMAT})
     await conection.commit()
     await conection.close()
     return true
@@ -92,6 +126,7 @@ async function getConseContenido(senderId, reciverId, mensajeId) {
     throw error
   }
 }
+
 
 export async function getFriendMensajes(senderId, reciverId) {
   try {
@@ -149,5 +184,76 @@ export async function getGroupMensajes(codGrupo) {
   } catch (error) {
     console.error("Error fetching friend messages:", error)
     throw error
+  }
+}
+
+export async function getIntegrantesGrupos(userId, codGrupo) {
+  try {
+    const conection = await DBConnection()
+    const sql = `
+    SELECT U.CONSECUSER id
+    FROM USUARIO U 
+    INNER JOIN PERTENECE P ON U.CONSECUSER = P.USE_CONSECUSER
+    WHERE P.CODGRUPO = :codGrupo AND P.CONSECUSER NOT LIKE :userId;`
+    const result = await conection.execute(sql, [codGrupo, userId], {outFormat: OBJECT_FORMAT})
+    await conection.close()
+    return result.rows
+  } catch (error) {
+    console.error("Error fetching group members:", error)
+    throw error
+  }
+}
+
+export async function prepareFile(file) {
+  try {
+    const localizacion = file.path
+    const tipoArchivo = getFileType(file)
+    const tipoContenido = getContentType(file)
+    return {localizacion, tipoArchivo, tipoContenido}
+  } catch (error) {
+    throw new Error("Error preparing file: " + error.message);
+    
+  }
+}
+
+export function getFileType(file) {
+  const fileType = file.mimetype.split('/')[1];
+  switch (fileType) {
+    case 'jpeg':
+      return 'BMP'
+    case 'jpg':
+      return 'BMP'
+    case 'png':
+      return 'BMP'
+    case 'pdf':
+      return 'PDF'
+    case 'mp4':
+      return 'MP4'
+    case 'avi':
+      return 'AVI'
+    case 'mp3':
+      return 'MP3'
+    case 'exe':
+      return 'EXE'
+    case 'docx':
+      return 'DOC'
+    case 'xlsx':
+      return 'XLS'
+    default:
+      return 'DOC'
+  }
+}
+
+export function getContentType(file) {
+  const fileType = file.mimetype.split('/')[0];
+  switch (fileType) {
+    case 'image':
+      return '1'
+    case 'video':
+      return '5'
+    case 'text':
+      return '2'
+    default:
+      return '2'
   }
 }

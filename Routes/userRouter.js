@@ -1,18 +1,14 @@
 import express from 'express'
 
-import { checkEmail, checkUserByEmail, createUser, getUser , checkUser} from '../Controller/userController.js'
+import { getUserInfo, getFriends, getUserGroups} from '../Controller/userController.js'
 
 export const userRouter = express.Router()
 
-userRouter.get("/test", async (req,res)=>{
-  res.send(await getUser())
-})
+userRouter.get('/:userId', async (req,res)=>{
+  const { userId} = req.params
 
-userRouter.getUserInfo('/', async (req,res)=>{
-  const { email} = req.body
-  
   try {
-    const result = await getUserInfo({email})
+    const result = await getUserInfo(userId)
     res.status(201).json(result)
   } catch (error) {
     console.error("Error creating user:", error)
@@ -20,46 +16,29 @@ userRouter.getUserInfo('/', async (req,res)=>{
   }
 })
 
-
-userRouter.post('/checkEmail/', async (req, res) => {
-  const { email } = req.body
-  console.log("Checking email:", email)
+userRouter.get('/friends/:userId', async (req, res) => {
+  const { userId } = req.params
 
   try {
-    const result = await checkEmail(email)
-    console.log(result);
-    
-    res.status(200).json(result)
+    const result = await getFriends(userId)
+    res.status(201).json(result)
   } catch (error) {
-    console.error("Error checking email:", error)
+    console.error("Error fetching friends:", error)
     res.status(500).json({ error: "Internal Server Error", message: error.message })
   }
 })
 
-userRouter.post('/checkUser', async (req, res) => {
-  const { usuario } = req.body
-  console.log("Checking user:", usuario)
+userRouter.get('/groups/:userId', async (req, res) => {
+  const { userId } = req.params
 
   try {
-    const exists = await checkUser(usuario)
-    res.status(200).json({ disponible: !exists})
+    const result = await getUserGroups(userId)
+    res.status(201).json(result)
   } catch (error) {
-    console.error("Error checking user:", error)
+    console.error("Error fetching users:", error)
     res.status(500).json({ error: "Internal Server Error", message: error.message })
   }
-})
+})  
 
-userRouter.post('/checkUserEmail', async (req, res) => {
-  const { email } = req.body
-  console.log("Checking user and email:", email)
-
-  try {
-    const exists = await checkUserByEmail(email)
-    res.status(200).json({ disponible: !exists })
-  } catch (error) {
-    console.error("Error checking user and email:", error)
-    res.status(500).json({ error: "Internal Server Error", message: error.message })
-  }
-})
 
 
