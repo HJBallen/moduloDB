@@ -3,7 +3,7 @@ import multer from 'multer'
 
 export const messageRouter = express.Router()
 
-import {createFriendTextMessage, createFriendContentMessage, prepareFile, getFriendMensajes, getGroupMensajes} from '../Controller/messagesController.js'
+import {createFriendTextMessage, createFriendContentMessage, prepareFile, getFriendMensajes, getGroupMensajes, getLastGroupMessage, getLastFriendMessage, getIntegrantesGrupos} from '../Controller/messagesController.js'
 
 const storage = multer.diskStorage({destination: (req, file, cb) => {
   cb(null, 'uploads/')
@@ -62,6 +62,7 @@ messageRouter.post('/createContentGroupMessage', upload.single('file'), async (r
 })
 
 messageRouter.post('/createTextGroupMessage', async (req, res) => {
+  console.log(req.body)  
   let { senderId, reciverId, codGrupo, senderHiloId, reciverHiloId, mensajeHiloId, mensaje } = req.body
   if (senderHiloId === undefined) senderHiloId = null
   if (reciverHiloId === undefined) reciverHiloId = null
@@ -72,6 +73,17 @@ messageRouter.post('/createTextGroupMessage', async (req, res) => {
     res.status(201).json(result)
   } catch (error) {
     console.error("Error creating group message:", error)
+    res.status(500).json({ error: "Internal Server Error", message: error.message })
+  }
+})
+
+messageRouter.get('/integrantes/:userId/:codGrupo',async(req, res)=>{
+  const {codGrupo,userId} = req.params
+  try {
+    const result = await getIntegrantesGrupos(userId,codGrupo)
+    res.status(200).json(result)
+  } catch (error) {
+    onsole.error("Error getting group members", error)
     res.status(500).json({ error: "Internal Server Error", message: error.message })
   }
 })
@@ -96,6 +108,30 @@ messageRouter.get('/getGroupMessages/:codGrupo', async (req, res) => {
     res.status(200).json(messages)
   } catch (error) {
     console.error("Error fetching group messages:", error)
+    res.status(500).json({ error: "Internal Server Error", message: error.message })
+  }
+})
+
+messageRouter.get('/lastGroupMessage/:codGrupo',async(req,res)=>{
+  const { codGrupo } = req.params
+  try {
+    const messages = await getLastGroupMessage(codGrupo)
+    console.log(messages);
+    
+    res.status(200).json(messages)
+  } catch (error) {
+    console.error("Error fetching group messages:", error)
+    res.status(500).json({ error: "Internal Server Error", message: error.message })
+  }
+})
+
+messageRouter.get('/lastFriendMessage/:senderId/:reciverId',async(req,res)=>{
+  const { senderId, reciverId } = req.params
+  try {
+    const messages = await getLastFriendMessage(senderId, reciverId)
+    res.status(200).json(messages)
+  } catch (error) {
+    console.error("Error fetching friend messages:", error)
     res.status(500).json({ error: "Internal Server Error", message: error.message })
   }
 })

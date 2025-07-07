@@ -137,6 +137,8 @@ export async function getFriendMensajes(senderId, reciverId) {
         M.USE_CONSECUSER receptor,
         M.FECHAREGMEN fecha,
         M.MEN_CONSMENSAJE hilo,
+        M.MEN_CONSECUSER hiloRemitente,
+        M.MEN_USE_CONSECUSER hiloReceptor,
         C.LOCALIZACONTENIDO localizaContenido,
         T.DESCTIPOCONTENIDO tipoContenido,
         A.DESCTIPOARCHIVO tipoArchivo
@@ -144,7 +146,7 @@ export async function getFriendMensajes(senderId, reciverId) {
       LEFT JOIN CONTENIDO C ON M.USE_CONSECUSER= C.USE_CONSECUSER AND M.CONSECUSER = C.CONSECUSER AND M.CONSMENSAJE = C.CONSMENSAJE
       LEFT JOIN TIPOCONTENIDO T ON C.IDTIPOCONTENIDO = T.IDTIPOCONTENIDO
       LEFT JOIN TIPOARCHIVO A ON C.IDTIPOARCHIVO = A.IDTIPOARCHIVO
-      WHERE (M.CONSECUSER = :senderId AND M.USE_CONSECUSER = :reciverId) OR (M.USE_CONSECUSER = :senderId AND M.CONSECUSER = :reciverId) AND M.CODGRUPO IS NULL
+      WHERE ((M.CONSECUSER = :senderId AND M.USE_CONSECUSER = :reciverId) OR (M.USE_CONSECUSER = :senderId AND M.CONSECUSER = :reciverId)) AND M.CODGRUPO IS NULL
       ORDER BY M.FECHAREGMEN DESC`
     const result = await conection.execute(sql, [senderId, reciverId], {outFormat: OBJECT_FORMAT})
     await conection.close()
@@ -164,6 +166,8 @@ export async function getGroupMensajes(codGrupo) {
         M.USE_CONSECUSER receptor,
         M.FECHAREGMEN fecha,
         M.MEN_CONSMENSAJE hilo,
+        M.MEN_CONSECUSER hiloRemitente,
+        M.MEN_USE_CONSECUSER hiloReceptor,
         C.LOCALIZACONTENIDO localizaContenido,
         T.DESCTIPOCONTENIDO tipoContenido,
         A.DESCTIPOARCHIVO tipoArchivo
@@ -254,4 +258,71 @@ export function getContentType(file) {
     default:
       return '2'
   }
+}
+
+export async function getLastGroupMessage(codGrupo) {
+  try {
+    const conection = await DBConnection()
+    const sql = `
+      SELECT * FROM (
+  SELECT M.CONSMENSAJE id, 
+        M.CONSECUSER remitente,
+        M.USE_CONSECUSER receptor,
+        M.FECHAREGMEN fecha,
+        M.MEN_CONSMENSAJE hilo,
+        M.MEN_CONSECUSER hiloRemitente,
+        M.MEN_USE_CONSECUSER hiloReceptor,
+        C.LOCALIZACONTENIDO localizaContenido,
+        T.DESCTIPOCONTENIDO tipoContenido,
+        A.DESCTIPOARCHIVO tipoArchivo
+FROM MENSAJE M
+LEFT JOIN CONTENIDO C 
+  ON M.USE_CONSECUSER = C.USE_CONSECUSER 
+  AND M.CONSECUSER = C.CONSECUSER 
+  AND M.CONSMENSAJE = C.CONSMENSAJE
+LEFT JOIN TIPOCONTENIDO T ON C.IDTIPOCONTENIDO = T.IDTIPOCONTENIDO
+LEFT JOIN TIPOARCHIVO A   ON C.IDTIPOARCHIVO = A.IDTIPOARCHIVO
+WHERE M.CODGRUPO = :codGrupo
+ORDER BY M.FECHAREGMEN ASC
+) WHERE ROWNUM = 1`
+    const result = await conection.execute(sql, [codGrupo], {outFormat: OBJECT_FORMAT})
+    await conection.close()
+    return result.rows
+  } catch (error) {
+    console.error("Error fetching friend messages:", error)
+    throw error
+  }
+  
+}
+
+export async function getLastFriendMessage(senderId,reciverId) {
+  try {
+    const conection = await DBConnection()
+    const sql = `
+      SELECT * FROM (
+  SELECT M.CONSMENSAJE id,
+        M.CONSECUSER remitente,
+        M.USE_CONSECUSER receptor,
+        M.FECHAREGMEN fecha,
+        M.MEN_CONSMENSAJE hilo,
+        M.MEN_CONSECUSER hiloRemitente,
+        M.MEN_USE_CONSECUSER hiloReceptor,
+        C.LOCALIZACONTENIDO localizaContenido,
+        T.DESCTIPOCONTENIDO tipoContenido,
+        A.DESCTIPOARCHIVO tipoArchivo
+FROM MENSAJE M
+LEFT JOIN CONTENIDO C ON M.USE_CONSECUSER= C.USE_CONSECUSER AND M.CONSECUSER = C.CONSECUSER AND M.CONSMENSAJE = C.CONSMENSAJE
+LEFT JOIN TIPOCONTENIDO T ON C.IDTIPOCONTENIDO = T.IDTIPOCONTENIDO
+LEFT JOIN TIPOARCHIVO A ON C.IDTIPOARCHIVO = A.IDTIPOARCHIVO
+WHERE ((M.CONSECUSER = :senderId AND M.USE_CONSECUSER = :reciverId) OR (M.CONSECUSER = :reciverId AND M.USE_CONSECUSER = :senderId)) AND M.CODGRUPO IS NULL
+ORDER BY M.FECHAREGMEN ASC
+) WHERE ROWNUM = 1`
+    const result = await conection.execute(sql, [senderId,reciverId], {outFormat: OBJECT_FORMAT})
+    await conection.close()
+    return result.rows
+  } catch (error) {
+    console.error("Error fetching friend messages:", error)
+    throw error
+  }
+  
 }
